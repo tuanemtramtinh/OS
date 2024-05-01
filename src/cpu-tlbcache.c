@@ -19,6 +19,8 @@
 
 #include "mm.h"
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 #define init_tlbcache(mp,sz,...) init_memphy(mp, sz, (1, ##__VA_ARGS__))
 
@@ -29,12 +31,21 @@
  *  @pgnum: page number
  *  @value: obtained value
  */
-int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, BYTE value)
+
+int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, BYTE * value)
 {
-   /* TODO: the identify info is mapped to 
+   /* : the identify info is mapped to 
     *      cache line by employing:
     *      direct mapped, associated mapping etc.
     */
+   
+   if (mp == NULL || value == NULL){
+      return -1;
+   }
+
+   int index = (pid ^ pgnum) % mp->maxsz;
+   *value = mp->storage[index];
+
    return 0;
 }
 
@@ -51,6 +62,13 @@ int tlb_cache_write(struct memphy_struct *mp, int pid, int pgnum, BYTE value)
     *      cache line by employing:
     *      direct mapped, associated mapping etc.
     */
+   if (mp == NULL) {
+        return -1;  // Return error if the input pointer is invalid
+    }
+
+   // Compute index for direct mapped cache
+   int index = (pid ^ pgnum) % mp->maxsz;  // Simple hash combining pid and page number
+   mp->storage[index] = value;  // Store the value in the cache
    return 0;
 }
 
@@ -100,7 +118,9 @@ int TLBMEMPHY_dump(struct memphy_struct * mp)
    /*TODO dump memphy contnt mp->storage 
     *     for tracing the memory content
     */
-
+   for (int i = 0; i < mp->maxsz; i++) {
+        printf("TLB Entry %d: %d\n", i, mp->storage[i]);
+   }
    return 0;
 }
 

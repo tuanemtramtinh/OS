@@ -1,4 +1,4 @@
-//#ifdef MM_PAGING
+// #ifdef MM_PAGING
 /*
  * PAGING based Memory Management
  * Memory physical module mm/mm-memphy.c
@@ -6,6 +6,8 @@
 
 #include "mm.h"
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 /*
  *  MEMPHY_mv_csr - move MEMPHY cursor
@@ -160,9 +162,21 @@ int MEMPHY_dump(struct memphy_struct * mp)
     /*TODO dump memphy contnt mp->storage 
      *     for tracing the memory content
      */
-   //  if (mp && mp->storage){
-   //    for ()
-   //  }
+   if(!mp || !mp->storage) {
+      return -1;
+   }
+
+   char memory_content[256];
+   char c[256];
+   strcpy(memory_content, "Memory content [pos, content]: ");
+   int i;
+   for(i = 0; i < mp->maxsz; i ++) {
+      if(mp->storage[i] == (char)0) continue;
+      sprintf(c, "[%d, %d]", i, mp->storage[i]);
+      strcat(memory_content, c);
+   }
+   strcat(memory_content, "\n\0");
+   printf("%s\n", memory_content);
 
     return 0;
 }
@@ -199,4 +213,4 @@ int init_memphy(struct memphy_struct *mp, int max_size, int randomflg)
    return 0;
 }
 
-//#endif
+// #endif

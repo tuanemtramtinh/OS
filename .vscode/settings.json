@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "*.rmd": "markdown",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "string.h": "c",
+        "pthread.h": "c"
     }
 }

@@ -100,11 +100,17 @@ int vmap_page_range(struct pcb_t *caller, // process call
    *      in page table caller->mm->pgd[]
    */
 
-   /* Tracking for later page replacement activities (if needed)
-    * Enqueue new usage page */
-   enlist_pgn_node(&caller->mm->fifo_pgn, pgn+pgit);
-
-
+  for(pgit = 0; pgit < pgnum; pgit++){
+    fpit = fpit->fp_next;
+    pgn = PAGING_PGN((addr + pgit*PAGING_PAGESZ));
+    if (fpit){
+      pte_set_fpn(&(caller->mm->pgd[pgn]), fpit->fpn);
+      /* Tracking for later page replacement activities (if needed)
+      * Enqueue new usage page */
+      enlist_pgn_node(&caller->mm->fifo_pgn, pgn+pgit);
+    }
+  }
+  ret_rg->rg_end += (pgit - 1)*PAGING_PAGESZ;
   return 0;
 }
 
@@ -118,14 +124,71 @@ int vmap_page_range(struct pcb_t *caller, // process call
 int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struct** frm_lst)
 {
   int pgit, fpn;
-  //struct framephy_struct *newfp_str;
+  struct framephy_struct *newfp_str;
 
   for(pgit = 0; pgit < req_pgnum; pgit++)
   {
     if(MEMPHY_get_freefp(caller->mram, &fpn) == 0)
    {
-     
+      newfp_str = (struct framephy_struct*)malloc(sizeof(struct framephy_struct));
+      newfp_str->fpn = fpn;
+      newfp_str->owner = caller->mm;
+      if (!*frm_lst){
+        *frm_lst = newfp_str;
+      }
+      else{
+        newfp_str->fp_next = *frm_lst;
+        *frm_lst = newfp_str;
+      }
+
+      newfp_str->fp_next = caller->mram->used_fp_list;
+      caller->mram->used_fp_list = newfp_str;
    } else {  // ERROR CODE of obtaining somes but not enough frames
+      int victim_fpn, victim_pgn, victim_pte;
+      int swpfpn = -1;
+      if (find_victim_page(caller->mm, &victim_pgn) < 0){
+        return -1;
+      }
+
+      victim_pte = caller->mm->pgd[victim_pgn];
+      victim_fpn = PAGING_FPN(victim_pte);
+
+      newfp_str = (struct framephy_struct*)malloc(sizeof(struct framephy_struct));
+      newfp_str->fpn = victim_fpn;
+      newfp_str->owner = caller->mm;
+
+      if(!*frm_lst){
+        *frm_lst = newfp_str;
+      }
+      else{
+        newfp_str->fp_next = *frm_lst;
+        *frm_lst = newfp_str;
+      }
+
+      int i = 0;
+      if (MEMPHY_get_freefp(caller->active_mswp, &swpfpn) == 0){
+        __swap_cp_page(caller->mram, victim_fpn, caller->active_mswp, swpfpn);
+        struct memphy_struct* mswp = (struct memphy_struct*)caller->mswp;
+        for (i = 0; i < PAGING_MAX_MMSWP; i++){
+          if (mswp + i == caller->active_mswp){
+            break;
+          }
+        }
+      }
+      else{
+        struct memphy_struct* mswp = (struct memphy_struct*)caller->mswp;
+        swpfpn = -1;
+        for (i = 0; i < PAGING_MAX_MMSWP; i++){
+          if (MEMPHY_get_freefp(mswp + i, &swpfpn) == 0){
+            __swap_cp_page(caller->mram, victim_fpn, mswp+i, swpfpn);
+            break;
+          }
+        }
+      }
+
+      if (swpfpn == -1) return -1;
+
+      pte_set_swap(&caller->mm->pgd[victim_pgn], i, swpfpn);
    } 
  }
 

@@ -81,10 +81,15 @@ int tlbread(struct pcb_t * proc, uint32_t source,
   /* by using tlb_cache_read()/tlb_cache_write()*/
   /* frmnum is return value of tlb_cache_read/write value*/
 	
+  int val = tlb_cache_read(proc->mram, proc->pid, source + offset, &frmnum);
+
 #ifdef IODUMP
-  if (frmnum >= 0)
+  if (frmnum >= 0){
     printf("TLB hit at read region=%d offset=%d\n", 
 	         source, offset);
+    val = __read(proc, 0, source, offset, &data);
+    tlb_cache_write(proc->mram, proc->pid, source + offset, data);  // Update TLB with new data
+  }
   else 
     printf("TLB miss at read region=%d offset=%d\n", 
 	         source, offset);
@@ -94,7 +99,7 @@ int tlbread(struct pcb_t * proc, uint32_t source,
   MEMPHY_dump(proc->mram);
 #endif
 
-  int val = __read(proc, 0, source, offset, &data);
+  //int val = __read(proc, 0, source, offset, &data);
 
   destination = (uint32_t) data;
 
@@ -113,17 +118,19 @@ int tlbread(struct pcb_t * proc, uint32_t source,
 int tlbwrite(struct pcb_t * proc, BYTE data,
              uint32_t destination, uint32_t offset)
 {
-  int val;
   BYTE frmnum = -1;
-
+  int val = tlb_cache_read(proc->mram, proc->pid, destination + offset, &frmnum);
   /* TODO retrieve TLB CACHED frame num of accessing page(s))*/
   /* by using tlb_cache_read()/tlb_cache_write()
   frmnum is return value of tlb_cache_read/write value*/
 
 #ifdef IODUMP
-  if (frmnum >= 0)
+  if (frmnum >= 0){
     printf("TLB hit at write region=%d offset=%d value=%d\n",
 	          destination, offset, data);
+    val = __write(proc, 0, destination, offset, data);
+    tlb_cache_write(proc->mram, proc->pid, destination + offset, frmnum);  // Update TLB        
+  }
 	else
     printf("TLB miss at write region=%d offset=%d value=%d\n",
             destination, offset, data);
@@ -133,7 +140,7 @@ int tlbwrite(struct pcb_t * proc, BYTE data,
   MEMPHY_dump(proc->mram);
 #endif
 
-  val = __write(proc, 0, destination, offset, data);
+  //val = __write(proc, 0, destination, offset, data);
 
   /* TODO update TLB CACHED with frame num of recent accessing page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/

@@ -191,11 +191,11 @@ static void read_config(const char * path) {
 	 * Format: (size=0 result non-used memswap, must have RAM and at least 1 SWAP)
 	 *        MEM_RAM_SZ MEM_SWP0_SZ MEM_SWP1_SZ MEM_SWP2_SZ MEM_SWP3_SZ
 	*/
-	// fscanf(file, "%d\n", &memramsz);
-	// for(sit = 0; sit < PAGING_MAX_MMSWP; sit++)
-	// 	fscanf(file, "%d", &(memswpsz[sit])); 
+	fscanf(file, "%d\n", &memramsz);
+	for(sit = 0; sit < PAGING_MAX_MMSWP; sit++)
+		fscanf(file, "%d", &(memswpsz[sit])); 
 
-	// fscanf(file, "\n"); /* Final character */
+	fscanf(file, "\n"); /* Final character */
 #endif
 #endif
 
@@ -210,7 +210,7 @@ static void read_config(const char * path) {
 		strcat(ld_processes.path[i], "input/proc/");
 		char proc[100];
 #ifdef MLQ_SCHED
-		// fscanf(file, "%lu %s %lu\n", &ld_processes.start_time[i], proc, &ld_processes.prio[i]);
+		fscanf(file, "%lu %s %lu\n", &ld_processes.start_time[i], proc, &ld_processes.prio[i]);
 		// fscanf(file, "%lu %s\n", &ld_processes.prio[i], proc);
 		// char line[100];
 		// fgets(line, sizeof(line), file);
@@ -218,9 +218,9 @@ static void read_config(const char * path) {
 		// printf("\n");
 		// sscanf(line, "%lu %s", &ld_processes.prio[i], proc);
 		// printf("%lu %s\n", ld_processes.prio[i], proc);
-		fgets(line, sizeof(line), file);
-		sscanf(line, "%lu %s", &ld_processes.prio[i], proc);
-		printf("%s\n", line);
+		// fgets(line, sizeof(line), file);
+		// sscanf(line, "%lu %s", &ld_processes.prio[i], proc);
+		// printf("%s\n", line);
 #else
 		fscanf(file, "%lu %s\n", &ld_processes.start_time[i], proc);
 #endif
