@@ -57,6 +57,14 @@ struct mm_struct {
    struct pgn_t *fifo_pgn;
 };
 
+struct tlb_property_struct {
+   /* Our group's TLB's properties */
+   int TLB_pid;
+   int TLB_pgn;
+   int TLB_fpn;
+};
+
+
 /*
  * FRAME/MEM PHY struct
  */
@@ -73,6 +81,10 @@ struct memphy_struct {
    BYTE *storage;
    int maxsz;
    
+   /* Our group's code */
+   struct tlb_property_struct *TLB; 
+   /* Our group's code */
+
    /* Sequential device fields */ 
    int rdmflg;
    int cursor;

@@ -195,6 +195,31 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
   return 0;
 }
 
+// int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struct **frm_lst) {
+// 	int pgit, fpn;
+// 	struct framephy_struct *newfp_head = NULL;
+//     int ret_val = 0;
+
+// 	for (pgit = 0; pgit < req_pgnum; pgit++) {
+// 		if (MEMPHY_get_freefp(caller->mram, &fpn) == 0) {
+//             struct framephy_struct *newfp_node = malloc(sizeof(struct framephy_struct));
+//             newfp_node->fpn = fpn;
+//             newfp_node->owner = caller->mm;
+//             newfp_node->fp_next = newfp_head;
+//             newfp_head = newfp_node;
+// 		} else { // ERROR CODE of obtaining somes but not enough frames
+//             // return allocated frames, but not enough
+//             // out of memory
+//             ret_val = -3000;
+//             break;
+// 		}
+// 	}
+
+//   *frm_lst = newfp_head;
+
+// 	return ret_val;
+// }
+
 
 /* 
  * vm_map_ram - do the mapping all vm are to ram storage device

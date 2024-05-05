@@ -14,18 +14,18 @@
  *@rg_elmt: new region
  *
  */
-int enlist_vm_freerg_list(struct mm_struct *mm, struct vm_rg_struct rg_elmt)
+int enlist_vm_freerg_list(struct mm_struct *mm, struct vm_rg_struct *rg_elmt)
 {
   struct vm_rg_struct *rg_node = mm->mmap->vm_freerg_list;
 
-  if (rg_elmt.rg_start >= rg_elmt.rg_end)
+  if (rg_elmt->rg_start >= rg_elmt->rg_end)
     return -1;
 
   if (rg_node != NULL)
-    rg_elmt.rg_next = rg_node;
+    rg_elmt->rg_next = rg_node;
 
   /* Enlist the new region */
-  mm->mmap->vm_freerg_list = &rg_elmt;
+  mm->mmap->vm_freerg_list = rg_elmt;
 
   return 0;
 }
@@ -82,19 +82,19 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
 
   /*Allocate at the toproof */
 
+
   if(caller->mm->symrgtbl[rgid].rg_start < caller->mm->symrgtbl[rgid].rg_end){
     pgfree_data(caller, rgid);
   }
 
-  struct vm_rg_struct rgnode;
+  struct vm_rg_struct *rgnode = malloc(sizeof(struct vm_rg_struct));
+  //struct vm_rg_struct rgnode;
 
-  if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0)
+  if (get_free_vmrg_area(caller, vmaid, size, rgnode) == 0)
   {
-    caller->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
-    caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
-
-    *alloc_addr = rgnode.rg_start;
-
+    caller->mm->symrgtbl[rgid].rg_start = rgnode->rg_start;
+    caller->mm->symrgtbl[rgid].rg_end = rgnode->rg_end;
+    *alloc_addr = rgnode->rg_start;
     return 0;
   }
 
@@ -103,7 +103,6 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   /*Attempt to increate limit to get space */
   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
   int inc_sz = PAGING_PAGE_ALIGNSZ(size);
-  //int inc_limit_ret
   int old_sbrk ;
 
   old_sbrk = cur_vma->sbrk;
@@ -111,20 +110,20 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   /* TODO INCREASE THE LIMIT
    * inc_vma_limit(caller, vmaid, inc_sz)
    */
-  if (old_sbrk + size > cur_vma->vm_end){
+  if (old_sbrk + inc_sz > cur_vma->vm_end){
     if (inc_vma_limit(caller, vmaid, inc_sz) == -1){
+      printf("Can't increase the limit\n");
       return -1;
     }
   }
   
-  cur_vma->sbrk += size;
-
+  cur_vma->sbrk += inc_sz;
+  
   /*Successful increase limit */
   caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
-  caller->mm->symrgtbl[rgid].rg_end = old_sbrk + size;
+  caller->mm->symrgtbl[rgid].rg_end = old_sbrk + inc_sz;
 
   *alloc_addr = old_sbrk;
-
   return 0;
 }
 
@@ -137,24 +136,19 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
  */
 int __free(struct pcb_t *caller, int vmaid, int rgid)
 {
-  struct vm_rg_struct rgnode;
+  struct vm_rg_struct * rgnode;
 
   if(rgid < 0 || rgid > PAGING_MAX_SYMTBL_SZ)
     return -1;
 
   /* TODO: Manage the collect freed region to freerg_list */
-  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
-  struct vm_rg_struct *currg = get_symrg_byid(caller->mm, rgid);
-  currg->rg_start = currg->rg_end = -1;
-  currg->rg_next = NULL;
-  rgnode = *currg;
-  if(currg == NULL || cur_vma == NULL) /* Invalid memory identify */
-	  return -1;
 
+  rgnode = get_symrg_byid(caller->mm, rgid);
 
   /*enlist the obsoleted memory region */
   enlist_vm_freerg_list(caller->mm, rgnode);
-
+  rgnode->rg_start = rgnode->rg_end = -1;
+  rgnode->rg_next = NULL;
   return 0;
 }
 
@@ -200,6 +194,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
     uint32_t vicpte;
 
     int tgtfpn = PAGING_SWP(pte);//the target frame storing our variable
+    int tgtswptyp = PAGING_SWPTYP(pte);
     /* TODO: Play with your paging theory here */
     /* Find victim page */
 
@@ -235,7 +230,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
     }
 
     /* Copy target frame from swap to mem */
-    __swap_cp_page(caller->active_mswp, tgtfpn, caller->mram, vicfpn);
+    __swap_cp_page(*(caller->mswp + tgtswptyp), tgtfpn, caller->mram, vicfpn);
 
     /* Update page table */
     //pte_set_swap() &mm->pgd;
@@ -582,6 +577,8 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
           rgit->rg_next = NULL;
         }
       }
+
+      break;
     }
     else
     {
