@@ -111,6 +111,8 @@ int vmap_page_range(struct pcb_t *caller, // process call
     }
   }
   ret_rg->rg_end += (pgit - 1)*PAGING_PAGESZ;
+
+  
   return 0;
 }
 
@@ -121,79 +123,79 @@ int vmap_page_range(struct pcb_t *caller, // process call
  * @frm_lst   : frame list
  */
 
-int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struct** frm_lst)
-{
-  int pgit, fpn;
-  struct framephy_struct *newfp_str;
+// int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struct** frm_lst)
+// {
+//   int pgit, fpn;
+//   struct framephy_struct *newfp_str;
 
-  for(pgit = 0; pgit < req_pgnum; pgit++)
-  {
-    if(MEMPHY_get_freefp(caller->mram, &fpn) == 0)
-   {
-      newfp_str = (struct framephy_struct*)malloc(sizeof(struct framephy_struct));
-      newfp_str->fpn = fpn;
-      newfp_str->owner = caller->mm;
-      if (!*frm_lst){
-        *frm_lst = newfp_str;
-      }
-      else{
-        newfp_str->fp_next = *frm_lst;
-        *frm_lst = newfp_str;
-      }
+//   for(pgit = 0; pgit < req_pgnum; pgit++)
+//   {
+//     if(MEMPHY_get_freefp(caller->mram, &fpn) == 0)
+//    {
+//       newfp_str = (struct framephy_struct*)malloc(sizeof(struct framephy_struct));
+//       newfp_str->fpn = fpn;
+//       newfp_str->owner = caller->mm;
+//       if (!*frm_lst){
+//         *frm_lst = newfp_str;
+//       }
+//       else{
+//         newfp_str->fp_next = *frm_lst;
+//         *frm_lst = newfp_str;
+//       }
 
-      newfp_str->fp_next = caller->mram->used_fp_list;
-      caller->mram->used_fp_list = newfp_str;
-   } else {  // ERROR CODE of obtaining somes but not enough frames
-      int victim_fpn, victim_pgn, victim_pte;
-      int swpfpn = -1;
-      if (find_victim_page(caller->mm, &victim_pgn) < 0){
-        return -1;
-      }
+//       newfp_str->fp_next = caller->mram->used_fp_list;
+//       caller->mram->used_fp_list = newfp_str;
+//    } else {  // ERROR CODE of obtaining somes but not enough frames
+//       int victim_fpn, victim_pgn, victim_pte;
+//       int swpfpn = -1;
+//       if (find_victim_page(caller->mm, &victim_pgn) < 0){
+//         return -1;
+//       }
 
-      victim_pte = caller->mm->pgd[victim_pgn];
-      victim_fpn = PAGING_FPN(victim_pte);
+//       victim_pte = caller->mm->pgd[victim_pgn];
+//       victim_fpn = PAGING_FPN(victim_pte);
 
-      newfp_str = (struct framephy_struct*)malloc(sizeof(struct framephy_struct));
-      newfp_str->fpn = victim_fpn;
-      newfp_str->owner = caller->mm;
+//       newfp_str = (struct framephy_struct*)malloc(sizeof(struct framephy_struct));
+//       newfp_str->fpn = victim_fpn;
+//       newfp_str->owner = caller->mm;
 
-      if(!*frm_lst){
-        *frm_lst = newfp_str;
-      }
-      else{
-        newfp_str->fp_next = *frm_lst;
-        *frm_lst = newfp_str;
-      }
+//       if(!*frm_lst){
+//         *frm_lst = newfp_str;
+//       }
+//       else{
+//         newfp_str->fp_next = *frm_lst;
+//         *frm_lst = newfp_str;
+//       }
 
-      int i = 0;
-      if (MEMPHY_get_freefp(caller->active_mswp, &swpfpn) == 0){
-        __swap_cp_page(caller->mram, victim_fpn, caller->active_mswp, swpfpn);
-        struct memphy_struct* mswp = (struct memphy_struct*)caller->mswp;
-        for (i = 0; i < PAGING_MAX_MMSWP; i++){
-          if (mswp + i == caller->active_mswp){
-            break;
-          }
-        }
-      }
-      else{
-        struct memphy_struct* mswp = (struct memphy_struct*)caller->mswp;
-        swpfpn = -1;
-        for (i = 0; i < PAGING_MAX_MMSWP; i++){
-          if (MEMPHY_get_freefp(mswp + i, &swpfpn) == 0){
-            __swap_cp_page(caller->mram, victim_fpn, mswp+i, swpfpn);
-            break;
-          }
-        }
-      }
+//       int i = 0;
+//       if (MEMPHY_get_freefp(caller->active_mswp, &swpfpn) == 0){
+//         __swap_cp_page(caller->mram, victim_fpn, caller->active_mswp, swpfpn);
+//         struct memphy_struct* mswp = (struct memphy_struct*)caller->mswp;
+//         for (i = 0; i < PAGING_MAX_MMSWP; i++){
+//           if (mswp + i == caller->active_mswp){
+//             break;
+//           }
+//         }
+//       }
+//       else{
+//         struct memphy_struct* mswp = (struct memphy_struct*)caller->mswp;
+//         swpfpn = -1;
+//         for (i = 0; i < PAGING_MAX_MMSWP; i++){
+//           if (MEMPHY_get_freefp(mswp + i, &swpfpn) == 0){
+//             __swap_cp_page(caller->mram, victim_fpn, mswp+i, swpfpn);
+//             break;
+//           }
+//         }
+//       }
 
-      if (swpfpn == -1) return -1;
+//       if (swpfpn == -1) return -1;
 
-      pte_set_swap(&caller->mm->pgd[victim_pgn], i, swpfpn);
-   } 
- }
+//       pte_set_swap(&caller->mm->pgd[victim_pgn], i, swpfpn);
+//    } 
+//  }
 
-  return 0;
-}
+//   return 0;
+// }
 
 // int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struct **frm_lst) {
 // 	int pgit, fpn;
@@ -219,6 +221,83 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
 
 // 	return ret_val;
 // }
+
+// int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struct** frm_lst)
+// {
+//   int pgit, fpn;
+//   struct framephy_struct *newfp_str = NULL;
+//   int ret = 0;
+//   for(pgit = 0; pgit < req_pgnum; pgit++)
+//   {
+//     if(MEMPHY_get_freefp(caller->mram, &fpn) == 0)
+//    {
+//       struct framephy_struct *newfp = malloc(sizeof(struct framephy_struct));
+//       newfp->fpn = fpn;
+//       newfp->owner= caller->mm;
+//       newfp->fp_next = newfp_str;
+//       newfp_str = newfp;
+//     } 
+//     else {  // ERROR CODE of obtaining somes but not enough frames
+//       ret = -3000;
+//       break;
+//     }
+//   } 
+//   *frm_lst = newfp_str;
+//   return ret;
+// }
+
+int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struct **frm_lst)
+{
+  int pgit, fpn;
+  // struct framephy_struct *newfp_str;
+  struct framephy_struct *newfp_str = NULL;
+
+  for (pgit = 0; pgit < req_pgnum; pgit++)
+  {
+    if (MEMPHY_get_freefp(caller->mram, &fpn) == 0)
+    {
+      struct framephy_struct *newfp = malloc(sizeof(struct framephy_struct));
+      newfp->fpn = fpn;
+      newfp->owner = caller->mm;
+      newfp->fp_next = newfp_str;
+      newfp_str = newfp;
+    }
+    else
+    { // ERROR CODE of obtaining somes but not enough frames
+      // MEMPHY_put_freefp to take back free frames
+      // delete all framephy_struct in newfp_list
+      int vicpgn, swpfpn;
+      if (find_victim_page(caller->mm, &vicpgn) == -1 || MEMPHY_get_freefp(caller->active_mswp, &swpfpn) == -1) 
+      {
+        while (newfp_str != NULL) 
+        {
+          MEMPHY_put_freefp(caller->mram, newfp_str->fpn);
+          struct framephy_struct *remain_fp_str = newfp_str->fp_next;
+          free(newfp_str);
+          newfp_str = remain_fp_str;
+        }
+        return -1;
+      }
+      // swap to get free frame
+      uint32_t vicpte = caller->mm->pgd[vicpgn];
+      int vicfpn = PAGING_FPN(vicpte);
+      __swap_cp_page(caller->mram, vicfpn, caller->active_mswp, swpfpn);
+      pte_set_swap(&caller->mm->pgd[vicpgn], 0, swpfpn);
+
+      // set up new free frame
+      struct framephy_struct *newfp = malloc(sizeof(struct framephy_struct));
+      newfp->fpn = vicfpn;
+      newfp->owner = caller->mm;
+      newfp->fp_next = newfp_str;
+      newfp_str = newfp;
+
+    }
+  }
+
+  // get result
+  *frm_lst = newfp_str;
+  return 0;
+}
 
 
 /* 

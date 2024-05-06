@@ -9,6 +9,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+int get_last_13_bits_int(uint32_t input) {
+  // Bitmask để lấy 13 bit cuối cùng
+  const uint32_t mask = (1 << 13) - 1;
+
+  // Bitwise AND để lấy 13 bit cuối cùng
+  uint32_t result = input & mask;
+
+  // Chuyển đổi uint32_t sang int
+  int int_result = (int) result;
+
+  // Trả về kết quả
+  return int_result;
+}
+
 /*enlist_vm_freerg_list - add new rg to freerg_list
  *@mm: memory region
  *@rg_elmt: new region
@@ -82,13 +96,12 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
 
   /*Allocate at the toproof */
 
-
   if(caller->mm->symrgtbl[rgid].rg_start < caller->mm->symrgtbl[rgid].rg_end){
     pgfree_data(caller, rgid);
   }
 
   struct vm_rg_struct *rgnode = malloc(sizeof(struct vm_rg_struct));
-  //struct vm_rg_struct rgnode;
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
 
   if (get_free_vmrg_area(caller, vmaid, size, rgnode) == 0)
   {
@@ -101,7 +114,6 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   /* TODO get_free_vmrg_area FAILED handle the region management (Fig.6)*/
  
   /*Attempt to increate limit to get space */
-  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
   int inc_sz = PAGING_PAGE_ALIGNSZ(size);
   int old_sbrk ;
 
@@ -123,6 +135,12 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
   caller->mm->symrgtbl[rgid].rg_end = old_sbrk + inc_sz;
 
+  // got region at new limit (Fig 6)
+  if (old_sbrk + inc_sz < cur_vma->sbrk) {
+      struct vm_rg_struct *remain_rg = init_vm_rg(old_sbrk + inc_sz, cur_vma->vm_end);
+      enlist_vm_freerg_list(caller->mm, remain_rg);
+  }
+
   *alloc_addr = old_sbrk;
   return 0;
 }
@@ -136,19 +154,18 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
  */
 int __free(struct pcb_t *caller, int vmaid, int rgid)
 {
-  struct vm_rg_struct * rgnode;
+  struct vm_rg_struct * rgnode = get_symrg_byid(caller->mm, rgid);
+  // struct vm_area_struct * curr_vma = get_vma_by_num(caller->mm, vmaid);
 
   if(rgid < 0 || rgid > PAGING_MAX_SYMTBL_SZ)
     return -1;
 
   /* TODO: Manage the collect freed region to freerg_list */
-
-  rgnode = get_symrg_byid(caller->mm, rgid);
+  // rgnode->rg_start = rgnode->rg_end = 0;
+  // rgnode->rg_next = NULL;
 
   /*enlist the obsoleted memory region */
   enlist_vm_freerg_list(caller->mm, rgnode);
-  rgnode->rg_start = rgnode->rg_end = -1;
-  rgnode->rg_next = NULL;
   return 0;
 }
 
@@ -203,55 +220,50 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
       return -1;
     }
 
-    int i;
-    for(i = 0; i < PAGING_MAX_MMSWP; i ++) {
-      if(caller->mswp[i] == caller->active_mswp) {
-        break;
-      }
-    }
-
     vicpte = caller->mm->pgd[vicpgn];
     vicfpn = PAGING_FPN(vicpte);
 
-    /* Get free frame in MEMSWP */
-    if(MEMPHY_get_freefp(caller->active_mswp, &swpfpn) < 0) {      
-      for(int j = 0; j < PAGING_MAX_MMSWP; j ++) {
-        if(MEMPHY_get_freefp(caller->mswp[j], &swpfpn) == 0) {
-          /* Do swap frame from MEMRAM to MEMSWP and vice versa*/
-          /* Copy victim frame to swap */        
-          __swap_cp_page(caller->mram, vicfpn, caller->mswp[j], swpfpn);
-          MEMPHY_put_freefp(caller->mswp[i], tgtfpn);
-          caller->active_mswp = caller->mswp[j];
-          break;
-        }
-      }
-    } else {
-      __swap_cp_page(caller->mram, vicfpn, caller->active_mswp, swpfpn);
+    if(MEMPHY_get_freefp(caller->active_mswp, &swpfpn) < 0){
+
     }
 
+    /* Get free frame in MEMSWP */
+    // if(MEMPHY_get_freefp(caller->active_mswp, &swpfpn) < 0) {      
+    //   for(int j = 0; j < PAGING_MAX_MMSWP; j ++) {
+    //     if(MEMPHY_get_freefp(caller->mswp[j], &swpfpn) == 0) {
+    //       /* Do swap frame from MEMRAM to MEMSWP and vice versa*/
+    //       /* Copy victim frame to swap */        
+    //       __swap_cp_page(caller->mram, vicfpn, caller->mswp[j], swpfpn);
+    //       MEMPHY_put_freefp(caller->mswp[i], tgtfpn);
+    //       caller->active_mswp = caller->mswp[j];
+    //       break;
+    //     }
+    //   }
+    // } else {
+
+     __swap_cp_page(caller->mram, vicfpn, caller->active_mswp, swpfpn);
+    // }
+
     /* Copy target frame from swap to mem */
-    __swap_cp_page(*(caller->mswp + tgtswptyp), tgtfpn, caller->mram, vicfpn);
+    __swap_cp_page(caller->active_mswp, tgtfpn, caller->mram, vicfpn);
 
     /* Update page table */
     //pte_set_swap() &mm->pgd;
-    pte_set_swap(&caller->mm->pgd[vicpgn], i, swpfpn);
-    /* Our group's code */
-
+    pte_set_swap(&caller->mm->pgd[vicpgn], 0, swpfpn);
     /* Update its online status of the target page */
     //pte_set_fpn() & mm->pgd[pgn];
-    pte_set_fpn(&caller->mm->pgd[pgn], vicfpn);
+    pte_set_fpn(&caller->mm->pgd[pgn], tgtfpn);
 
-    enlist_pgn_node(&caller->mm->fifo_pgn,pgn);
-    pte = caller->mm->pgd[pgn];
+    //pte = caller->mm->pgd[pgn];
 
 #ifdef CPU_TLB
     /* Update its online status of TLB (if needed) */
 #endif
 
-    // enlist_pgn_node(&caller->mm->fifo_pgn,pgn);
+    enlist_pgn_node(&caller->mm->fifo_pgn,pgn);
   }
 
-  *fpn = PAGING_FPN(pte);
+  *fpn = get_last_13_bits_int(pte);
 
   return 0;
 }
@@ -588,7 +600,6 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
 
  if(newrg->rg_start == -1) // new region not found
    return -1;
-
  return 0;
 }
 
