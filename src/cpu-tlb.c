@@ -22,7 +22,7 @@ int tlb_change_all_page_tables_of(struct pcb_t *proc,  struct memphy_struct * mp
    *      in flush or wipe TLB (if needed)
    */
 
-  return 0;
+  return tlb_flush_tlb_of(proc, mp);
 }
 
 int tlb_flush_tlb_of(struct pcb_t *proc, struct memphy_struct * mp)
