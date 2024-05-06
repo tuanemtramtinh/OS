@@ -166,17 +166,13 @@ int MEMPHY_dump(struct memphy_struct * mp)
       return -1;
    }
 
-   char memory_content[256];
-   char c[256];
-   strcpy(memory_content, "Memory content [pos, content]: ");
+   printf("---MEM DUMP---\n");
+   uint32_t* word_storage = (uint32_t*)mp->storage;
    int i;
-   for(i = 0; i < mp->maxsz; i ++) {
-      if(mp->storage[i] == (char)0) continue;
-      sprintf(c, "[%d, %d]", i, mp->storage[i]);
-      strcat(memory_content, c);
-   }
-   strcat(memory_content, "\n\0");
-   printf("%s\n", memory_content);
+   for (i = 0; i < mp->maxsz / 4; i++)
+      if (word_storage[i] != 0)
+         printf("%08x: %08x\n", i * 4, word_storage[i]);
+
 
     return 0;
 }

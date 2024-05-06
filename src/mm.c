@@ -86,32 +86,54 @@ int vmap_page_range(struct pcb_t *caller, // process call
               struct vm_rg_struct *ret_rg)// return mapped region, the real mapped fp
 {                                         // no guarantee all given pages are mapped
   //uint32_t * pte = malloc(sizeof(uint32_t));
-  struct framephy_struct *fpit = malloc(sizeof(struct framephy_struct));
+  //struct framephy_struct *fpit = malloc(sizeof(struct framephy_struct));
   //int  fpn;
   int pgit = 0;
   int pgn = PAGING_PGN(addr);
 
   ret_rg->rg_end = ret_rg->rg_start = addr; // at least the very first space is usable
 
-  fpit->fp_next = frames;
+  //fpit->fp_next = frames;
 
   /* TODO map range of frame to address space 
    *      [addr to addr + pgnum*PAGING_PAGESZ
    *      in page table caller->mm->pgd[]
    */
 
-  for(pgit = 0; pgit < pgnum; pgit++){
-    fpit = fpit->fp_next;
-    pgn = PAGING_PGN((addr + pgit*PAGING_PAGESZ));
-    if (fpit){
-      pte_set_fpn(&(caller->mm->pgd[pgn]), fpit->fpn);
-      /* Tracking for later page replacement activities (if needed)
-      * Enqueue new usage page */
-      enlist_pgn_node(&caller->mm->fifo_pgn, pgn+pgit);
-    }
-  }
-  ret_rg->rg_end += (pgit - 1)*PAGING_PAGESZ;
+  // for(pgit = 0; pgit < pgnum; pgit++){
+  //   fpit = fpit->fp_next;
+  //   pgn = PAGING_PGN((addr + pgit*PAGING_PAGESZ));
+  //   if (fpit){
+  //     pte_set_fpn(&(caller->mm->pgd[pgn]), fpit->fpn);
+  //     /* Tracking for later page replacement activities (if needed)
+  //     * Enqueue new usage page */
+  //     enlist_pgn_node(&caller->mm->fifo_pgn, pgn+pgit);
+  //   }
+  // }
+  // ret_rg->rg_end += (pgit - 1)*PAGING_PAGESZ;
 
+
+  struct framephy_struct *fpit = frames;
+  int ret_val = 0;
+  for (pgit = 0; pgit < pgnum; pgit++) {
+      if (fpit == NULL) {
+          // out of frames while still have pages to map
+          ret_val = -1;
+          break;
+      }
+      int fpn = fpit->fpn;
+      uint32_t *pte = &caller->mm->pgd[pgn + pgit];
+      pte_set_fpn(pte, fpn);
+      fpit = fpit->fp_next;
+
+      /* Tracking for later page replacement activities (if needed)
+        * Enqueue new usage page */
+      enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
+  }
+
+  ret_rg->rg_end = addr + pgit * PAGING_PAGESZ;
+
+	return ret_val;
   
   return 0;
 }

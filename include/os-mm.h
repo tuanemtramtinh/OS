@@ -81,14 +81,14 @@ struct memphy_struct {
    BYTE *storage;
    int maxsz;
    
-   /* Our group's code */
-   struct tlb_property_struct *TLB; 
-   /* Our group's code */
+   // /* Our group's code */
+   // struct tlb_property_struct *TLB; 
+   // /* Our group's code */
 
    /* Sequential device fields */ 
    int rdmflg;
    int cursor;
-
+   int pid_hold;
    /* Management structure */
    struct framephy_struct *free_fp_list;
    struct framephy_struct *used_fp_list;
