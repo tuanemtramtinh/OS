@@ -51,7 +51,7 @@ int tlb_cache_read(struct pcb_t* proc, struct memphy_struct * mp, int pid, int p
    //* checking pid
    if(pid != mp->pid_hold){
       tlb_flush_tlb_of(proc, mp);
-      return 0;
+      return -1;
    }
    *value = mp->storage[tlbIndex];
    //* value 32-bit
@@ -72,8 +72,8 @@ int tlb_cache_write(struct pcb_t* proc, struct memphy_struct *mp, int pid, int p
     *      direct mapped, associated mapping etc.
     */
    if(mp == NULL){
-         return -1;
-      }
+      return -1;
+   }
    if(pid != mp->pid_hold){
       tlb_flush_tlb_of(proc, mp);
       //* update pid hold
@@ -132,9 +132,17 @@ int TLBMEMPHY_dump(struct memphy_struct * mp)
    /*TODO dump memphy contnt mp->storage 
     *     for tracing the memory content
     */
-   for (int i = 0; i < mp->maxsz; i++) {
-        printf("TLB Entry %d: %d\n", i, mp->storage[i]);
+   if(!mp || !mp->storage) {
+      return -1;
    }
+
+   printf("---TLB MEM DUMP---\n");
+   uint32_t* word_storage = (uint32_t*)mp->storage;
+   //printf("%d\n", mp->maxsz);
+   int i;
+   for (i = 0; i < mp->maxsz / 4; i++)
+      if (word_storage[i] != -1)
+         printf("%08x: %08x\n", i * 4, word_storage[i]);
    return 0;
 }
 

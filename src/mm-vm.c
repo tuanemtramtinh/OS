@@ -9,20 +9,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-int get_last_13_bits_int(uint32_t input) {
-  // Bitmask để lấy 13 bit cuối cùng
-  const uint32_t mask = (1 << 13) - 1;
-
-  // Bitwise AND để lấy 13 bit cuối cùng
-  uint32_t result = input & mask;
-
-  // Chuyển đổi uint32_t sang int
-  int int_result = (int) result;
-
-  // Trả về kết quả
-  return int_result;
-}
-
 /*enlist_vm_freerg_list - add new rg to freerg_list
  *@mm: memory region
  *@rg_elmt: new region
@@ -115,72 +101,25 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
  
   /*Attempt to increate limit to get space */
 
-  /* Attempt to increase limit to get space */
-
   int inc_sz = PAGING_PAGE_ALIGNSZ(size);
   int old_sbrk;
   old_sbrk = cur_vma->sbrk;
-
-  inc_vma_limit(caller, vmaid, inc_sz);
+  
+  if(inc_vma_limit(caller, vmaid, inc_sz) < 0){
+    printf("Can't increase the limit\n");
+    return -1;
+  }
 
   if(inc_sz > size){
-    struct vm_rg_struct *rgnode = malloc(sizeof(struct vm_rg_struct));
-    rgnode->rg_start = size + old_sbrk + 1; 
-    rgnode->rg_end = inc_sz + old_sbrk;
+    struct vm_rg_struct *rgnode = init_vm_rg(size + old_sbrk + 1, inc_sz + old_sbrk);
     enlist_vm_freerg_list(caller->mm, rgnode);
   }
 
   cur_vma->sbrk += inc_sz;
-
   caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
   caller->mm->symrgtbl[rgid].rg_end = old_sbrk + size;
   
   *alloc_addr = old_sbrk;
-
-
-  //struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
-  // int gap_size = cur_vma->vm_end - cur_vma->sbrk;
-  // if(gap_size < size)
-  // {
-  //   int inc_sz = PAGING_PAGE_ALIGNSZ(size - gap_size);
-  //   if (inc_vma_limit(caller, vmaid, inc_sz) < 0)
-  //     return -1;
-  // }
-
-  // caller->mm->symrgtbl[rgid].rg_start = cur_vma->sbrk;
-  // caller->mm->symrgtbl[rgid].rg_end = cur_vma->sbrk + size;
-  // *alloc_addr = caller->mm->symrgtbl[rgid].rg_start;
-  // cur_vma->sbrk += size;
-
-  // int inc_sz = PAGING_PAGE_ALIGNSZ(size);
-  // int old_sbrk ;
-  // old_sbrk = cur_vma->sbrk;
-
-  
-
-  // /* TODO INCREASE THE LIMIT
-  //  * inc_vma_limit(caller, vmaid, inc_sz)
-  //  */
-  // if (old_sbrk + inc_sz /*size*/ > cur_vma->sbrk){
-  //   if (inc_vma_limit(caller, vmaid, inc_sz) == -1){
-  //     printf("Can't increase the limit\n");
-  //     return -1;
-  //   }
-  // }
-  
-  // cur_vma->sbrk += size;
-  
-  // /*Successful increase limit */
-  // caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
-  // caller->mm->symrgtbl[rgid].rg_end = old_sbrk + inc_sz;
-
-  // // got region at new limit (Fig 6)
-  // if (old_sbrk + inc_sz < cur_vma->sbrk) {
-  //     struct vm_rg_struct *newrgnode = init_vm_rg(old_sbrk + inc_sz, cur_vma->sbrk);
-  //     enlist_vm_freerg_list(caller->mm, newrgnode);
-  // }
-
-  // *alloc_addr = old_sbrk;
   return 0;
 }
 
@@ -200,8 +139,6 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
     return -1;
 
   /* TODO: Manage the collect freed region to freerg_list */
-  // rgnode->rg_start = rgnode->rg_end = 0;
-  // rgnode->rg_next = NULL;
 
   /*enlist the obsoleted memory region */
   enlist_vm_freerg_list(caller->mm, rgnode);
@@ -275,7 +212,10 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
     /* Copy target frame from swap to mem */
     __swap_cp_page(caller->active_mswp, tgtfpn, caller->mram, vicfpn);
 
+
+    MEMPHY_put_freefp(caller->active_mswp, tgtfpn);
     /* Update page table */
+    
     //pte_set_swap() &mm->pgd;
     pte_set_swap(&caller->mm->pgd[vicpgn], 0, swpfpn);
     /* Update its online status of the target page */
@@ -289,10 +229,13 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 #endif
 
     enlist_pgn_node(&caller->mm->fifo_pgn,pgn);
-    MEMPHY_put_freefp(caller->active_mswp, tgtfpn);
+    //*fpn = tgtfpn;
+    //printf("fpn get from hello if page not present: %d\n", *fpn);
+    return 0;
   }
 
   *fpn = PAGING_FPN(pte);
+  //printf("fpn get from hello: %d\n", *fpn);
 
   return 0;
 }
@@ -543,31 +486,28 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, int inc_sz)
 int find_victim_page(struct mm_struct *mm, int *retpgn) 
 {
   struct pgn_t *pg = mm->fifo_pgn;
-  //struct pgn_t *pg_prev = NULL;
+  struct pgn_t *pg_prev = NULL;
 
   /* TODO: Implement the theorical mechanism to find the victim page */
   if (pg == NULL){
     *retpgn = -1;
     return -1;
   }
+  
+  while(pg->pg_next != NULL){
+    pg_prev = pg;
+    pg = pg->pg_next;
+  }
+
+  if(pg_prev == NULL){
+    mm->fifo_pgn = NULL;
+  }
+  else{
+    pg_prev->pg_next = NULL;
+  }
 
   *retpgn = pg->pgn;
-	mm->fifo_pgn = pg->pg_next;
 	free(pg);
-
-  // while(pg->pg_next && pg->pg_next->pg_next)
-  //   pg = pg->pg_next;
-  
-  // if(pg->pg_next){
-  //   *retpgn = pg->pg_next->pgn;
-  //   free(pg->pg_next);
-  //   pg->pg_next = NULL;
-  // }
-  // else{
-  //   *retpgn = pg->pgn;
-  //   free(pg);
-  //   mm->fifo_pgn = pg = NULL;
-  // }
 
   return 0;
 }

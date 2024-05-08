@@ -217,22 +217,10 @@ static void read_config(const char * path) {
 		char proc[100];
 #ifdef MLQ_SCHED
 		fscanf(file, "%lu %s %lu\n", &ld_processes.start_time[i], proc, &ld_processes.prio[i]);
-		// fscanf(file, "%lu %s\n", &ld_processes.prio[i], proc);
-		// char line[100];
-		// fgets(line, sizeof(line), file);
-		// printf("%s", line);
-		// printf("\n");
-		// sscanf(line, "%lu %s", &ld_processes.prio[i], proc);
-		// printf("%lu %s\n", ld_processes.prio[i], proc);
-		// fgets(line, sizeof(line), file);
-		// sscanf(line, "%lu %s", &ld_processes.prio[i], proc);
-		// printf("%s\n", line);
 #else
 		fscanf(file, "%lu %s\n", &ld_processes.start_time[i], proc);
 #endif
 		strcat(ld_processes.path[i], proc);
-		// printf("%s\n", ld_processes.path[i]);
-		// printf("%lu\n", ld_processes.start_time[i]);
 	}
 }
 

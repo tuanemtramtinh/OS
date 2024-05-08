@@ -168,6 +168,7 @@ int MEMPHY_dump(struct memphy_struct * mp)
 
    printf("---MEM DUMP---\n");
    uint32_t* word_storage = (uint32_t*)mp->storage;
+   // printf("%d\n", mp->maxsz);
    int i;
    for (i = 0; i < mp->maxsz / 4; i++)
       if (word_storage[i] != 0)

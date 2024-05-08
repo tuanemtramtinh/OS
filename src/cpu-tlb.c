@@ -60,13 +60,9 @@ int tlballoc(struct pcb_t *proc, uint32_t size, uint32_t reg_index)
   int numpage = alloc_size / PAGING_PAGESZ;
   for(int i = 0; i < numpage; i++){
     uint32_t *fpn = malloc(sizeof(uint32_t));
-    /*uint32_t pte =*/
     pg_getpage(proc->mm, page_number + i,(int*)fpn, proc);
-    // printf("frame number getting from pg_getpage in alloc: %d\n", *fpn);
     tlb_cache_write(proc, proc->tlb, proc->pid, (page_number + i), *fpn);    
   }
-
-
   return val;
 }
 
@@ -91,7 +87,6 @@ int tlbfree_data(struct pcb_t *proc, uint32_t reg_index)
 
   for(int i = 0; i < freed_pages; i++){
     uint32_t *fpn = malloc(sizeof(uint32_t));
-    /*uint32_t pte =*/
     pg_getpage(proc->mm, pgn + i, (int*)fpn, proc);
     tlb_cache_write(proc ,proc->tlb, proc->pid, (pgn + i), *fpn);    
   }
@@ -119,8 +114,6 @@ int tlbread(struct pcb_t * proc, uint32_t source,
   int pgn = PAGING_PGN(start_region);
   BYTE fpn_retrieved_from_tlb = 0;
   frmnum = tlb_cache_read(proc ,proc->tlb, proc->pid, pgn, &fpn_retrieved_from_tlb);
-	
-  // int val = tlb_cache_read(proc->mram, proc->pid, source + offset, &frmnum);
 
 #ifdef IODUMP
   if (frmnum >= 0)
@@ -132,6 +125,7 @@ int tlbread(struct pcb_t * proc, uint32_t source,
 #ifdef PAGETBL_DUMP
   print_pgtbl(proc, 0, -1); //print max TBL
 #endif
+  //TLBMEMPHY_dump(proc->tlb);
   MEMPHY_dump(proc->mram);
 #endif
 
@@ -142,9 +136,10 @@ int tlbread(struct pcb_t * proc, uint32_t source,
   /* TODO update TLB CACHED with frame num of recent accessing page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
 
-  int fpn = pg_getpage(proc->mm, pgn, &fpn, proc);
-  int status = tlb_cache_write(proc, proc->tlb, proc->pid, pgn, fpn);
-
+  int fpn;
+  pg_getpage(proc->mm, pgn, &fpn, proc);
+  //printf("fpn content: %d\n", fpn);
+  /*int status =*/ tlb_cache_write(proc, proc->tlb, proc->pid, pgn, fpn);
   return val;
 }
 
@@ -180,6 +175,8 @@ int tlbwrite(struct pcb_t * proc, BYTE data,
 #ifdef PAGETBL_DUMP
   print_pgtbl(proc, 0, -1); //print max TBL
 #endif
+  //TLBMEMPHY_dump(proc->tlb);
+  //prinf("%d\n", proc->mram->maxsz);
   MEMPHY_dump(proc->mram);
 #endif
 
@@ -193,8 +190,10 @@ int tlbwrite(struct pcb_t * proc, BYTE data,
   /* TODO update TLB CACHED with frame num of recent accessing page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
 
-  int fpn = pg_getpage(proc->mm, pgn, &fpn, proc);
-  int status = tlb_cache_write(proc, proc->tlb, proc->pid, pgn, fpn);
+  int fpn;
+  pg_getpage(proc->mm, pgn, &fpn, proc);
+  //printf("fpn content: %d\n", fpn);
+  /*int status =*/ tlb_cache_write(proc, proc->tlb, proc->pid, pgn, fpn);
 
   return val;
 }
