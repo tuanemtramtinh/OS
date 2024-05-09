@@ -163,8 +163,7 @@ void dump(void) {
 				
 				if (_ram[j] != 0) {
 					printf("\t%05x: %02x\n", j, _ram[j]);
-				}
-					
+				}				
 			}
 		}
 	}

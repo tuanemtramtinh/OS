@@ -187,10 +187,19 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
     uint32_t vicpte;
 
     int tgtfpn = PAGING_SWP(pte);//the target frame storing our variable
+    int freefpn; //finding free frame in RAM
     /* TODO: Play with your paging theory here */
-    /* Find victim page */
 
-    /* Our group's code */
+    if (MEMPHY_get_freefp(caller->mram, &freefpn) == 0){
+
+      __swap_cp_page(caller->active_mswp, tgtfpn, caller->mram, freefpn);
+
+      pte_set_fpn(&mm->pgd[pgn], freefpn);
+
+      return 0;
+    }
+    /* Find victim page */
+    
     if(find_victim_page(caller->mm, &vicpgn) < 0) {
       return -1;
     }
@@ -202,7 +211,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 
     /* Get free frame in MEMSWP */
     if(MEMPHY_get_freefp(caller->active_mswp, &swpfpn) < 0){
-
+      return -1;
     }
 
 
