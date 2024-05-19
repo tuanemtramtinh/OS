@@ -186,7 +186,7 @@ int pg_getpage(struct mm_struct *mm, int page_num, int *frame_num,
 
     int target_frame_num =
         PAGING_SWP(page_entry); // the target frame storing our variable
-    int free_frame_num;         // finding free frame in RAM
+    // int free_frame_num;         // finding free frame in RAM
 
     /* TODO: Play with your paging theory here */
 

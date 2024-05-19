@@ -46,10 +46,6 @@ int tlb_flush_tlb_of(struct pcb_t *process, struct memphy_struct *memory) {
  */
 int tlballoc(struct pcb_t *process, uint32_t allocation_size,
              uint32_t region_index) {
-
-  // printf("\tProcess %d is in ALLOC instruction\n", process->pid);
-	// printf("\tALLOC at region=%d, size=%d\n", region_index, allocation_size);
-  
   int address, result;
 
   /* By default using vmaid = 0 */
@@ -81,9 +77,6 @@ int tlballoc(struct pcb_t *process, uint32_t allocation_size,
  *@reg_index: memory region ID (used to identify variable in symbole table)
  */
 int tlbfree_data(struct pcb_t *process, uint32_t region_index) {
-
-  // printf("\tProcess %d is in FREE instruction\n", process->pid);
-	// printf("\tFREE at region=%d\n", region_index);
   __free(process, 0, region_index);
 
   /* TODO update TLB CACHED frame num of freed page(s)*/
@@ -115,7 +108,6 @@ int tlbfree_data(struct pcb_t *process, uint32_t region_index) {
  */
 int tlbread(struct pcb_t *process, uint32_t source_region, uint32_t byte_offset,
             uint32_t destination_region) {
-  // printf("\tProcess %d is in READ instruction\n", process->pid);
 
   BYTE data, frame_number = -1;
 
@@ -126,14 +118,13 @@ int tlbread(struct pcb_t *process, uint32_t source_region, uint32_t byte_offset,
   int start_address =
       process->mm->symrgtbl[source_region].rg_start + byte_offset;
   int page_number = PAGING_PGN(start_address);
-  int frame_num_from_desired_page = -1;
-  pg_getpage(process->mm, page_number, &frame_num_from_desired_page, process);
+  // int frame_num_from_desired_page = -1;
+  // pg_getpage(process->mm, page_number, &frame_num_from_desired_page, process);
   BYTE frame_number_retrieved_from_tlb = 0;
   frame_number = tlb_cache_read(process, process->tlb, process->pid,
                                 page_number, &frame_number_retrieved_from_tlb);
 
-usleep(100);
-// printf("******************************************\n");
+  usleep(10);
 #ifdef IODUMP
   if (frame_number >= 0  /*frame_number == frame_num_from_desired_page*/)
     printf("TLB hit at read region=%d offset=%d\n", source_region, byte_offset);
@@ -143,13 +134,10 @@ usleep(100);
   }  
 #ifdef PAGETBL_DUMP
   print_pgtbl(process, 0, -1); // print max TBL
-  //usleep(100);
 #endif
   MEMPHY_dump(process->mram);
 #endif
-// usleep(200);
-// printf("******************************************\n");
-// usleep(100);
+  usleep(10);
   int read_status = __read(process, 0, source_region, byte_offset, &data);
   /* TODO update TLB CACHED with frame num of recent accessing page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
@@ -168,7 +156,6 @@ usleep(100);
  */
 int tlbwrite(struct pcb_t *process, BYTE data, uint32_t destination_region,
              uint32_t byte_offset) {
-  // printf("\tProcess %d is in WRITE instruction\n", process->pid);
   int write_status;
   BYTE frame_number = -1;
   // int result = tlb_cache_read(process->mram, process->pid, destination_region
@@ -179,13 +166,12 @@ int tlbwrite(struct pcb_t *process, BYTE data, uint32_t destination_region,
 
   int start_address = process->mm->symrgtbl[destination_region].rg_start + byte_offset;
   int page_number = PAGING_PGN(start_address);
-  uint32_t page_entry = process->mm->pgd[page_number];
-  int frame_num_from_desired_page = PAGING_FPN(page_entry);
+  // uint32_t page_entry = process->mm->pgd[page_number];
+  // int frame_num_from_desired_page = PAGING_FPN(page_entry);
   BYTE frame_number_retrieved_from_tlb = 0;
   frame_number = tlb_cache_read(process, process->tlb, process->pid, page_number, &frame_number_retrieved_from_tlb);
 
-// printf("******************************************\n");
-usleep(100);
+  usleep(10);
 #ifdef IODUMP
   if (frame_number >= 0  /*frame_number == frame_num_from_desired_page*/)
     printf("TLB hit at write region=%d offset=%d value=%d\n",
@@ -195,16 +181,13 @@ usleep(100);
            destination_region, byte_offset, data);
   }
 #ifdef PAGETBL_DUMP
-  print_pgtbl(process, 0, -1); // print max TBL
-  //usleep(100);
+  print_pgtbl(process, 0, -1); // print max TBL;
 #endif
   MEMPHY_dump(process->mram);
 #endif
-// printf("******************************************\n");
-// usleep(200);
   /* TODO update TLB CACHED with frame num of recent accessing page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
-
+  usleep(10);
   write_status = __write(process, 0, destination_region, byte_offset, data);
 
   int frame_page_number;

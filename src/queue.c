@@ -9,20 +9,10 @@ int empty(struct queue_t * q) {
 
 void enqueue(struct queue_t * q, struct pcb_t * proc) {
     /* TODO: put a new process to queue [q] */
-    if (q->size == MAX_QUEUE_SIZE) {
-        printf("Queue is full\n");
-        return;
-    }
-
-    int insertPos = 0; 
-    while(insertPos < q->size && q->proc[insertPos]->prio <= proc->prio) insertPos += 1;
-
-    for (int i = q->size; i > insertPos; i--){
-        q->proc[i] = q->proc[i - 1];
-    }
-
-    q->proc[insertPos] = proc;
-    q->size += 1;
+    if (q->size < MAX_QUEUE_SIZE){
+		q->proc[q->size] = proc;
+		q->size++;
+	}
 }
 
 struct pcb_t * dequeue(struct queue_t * q) {
@@ -30,18 +20,25 @@ struct pcb_t * dequeue(struct queue_t * q) {
         * in the queue [q] and remember to remove it from q
         * */
 
-    if (q->size == 0){
-        printf("Queue is empty\n");
-        return NULL;
+    if (q->size != 0) {
+        int max_prior= q->proc[0]->prio;
+        int max_idx = 0;
+        for (int i = 1; i < q->size; i++) {
+            if (q->proc[i]->prio > max_prior) {
+                max_prior = q->proc[i]->prio;
+                max_idx = i;
+            }
+        }
+        struct pcb_t* return_proc = q->proc[max_idx];
+        for (int i = max_idx; i < q->size - 1; i++) {
+                q->proc[i] = q->proc[i + 1];
+        }
+        q->proc[q->size - 1] = NULL;
+        q->size--;
+
+        return return_proc;
     }
 
-    struct pcb_t *proc = q->proc[0];
-    for (int i = 0; i < q->size - 1; i++){
-        q->proc[i] = q->proc[i + 1];
-    }
-    q->size-=1;
-
-    return proc;
-
+    return NULL;
 }
 

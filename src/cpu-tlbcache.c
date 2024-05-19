@@ -67,8 +67,6 @@ int tlb_cache_read(struct pcb_t *proc, struct memphy_struct *mp, int pid,
     return 0;
   }
   pthread_mutex_unlock(&pid_lock);
-  //*value = mp->storage[tlbIndex];
-  // return mp->storage[tlbIndex];
   TLBMEMPHY_read(mp, tlb_index, value);
   return *value;
 }
@@ -109,7 +107,6 @@ int tlb_cache_write(struct pcb_t *proc, struct memphy_struct *mp, int pid,
   // mp->storage[address] = value;
   uint32_t tlb_index = (uint32_t)pgnum % mp->maxsz;
   TLBMEMPHY_write(mp, tlb_index, value);
-  ;
   return 0;
 }
 

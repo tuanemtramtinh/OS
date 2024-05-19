@@ -127,8 +127,7 @@ static void *ld_routine(void *args) {
     while (current_time() < ld_processes.start_time[i]) {
       next_slot(timer_id);
     }
-    usleep(100);
-    // printf("Current time slot is : %d\n", current_time());
+    usleep(10);
 #ifdef MM_PAGING
     proc->mm = malloc(sizeof(struct mm_struct));
     init_mm(proc->mm, proc);
