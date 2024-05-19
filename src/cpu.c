@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 int calc(struct pcb_t * proc) {
-	printf("\tProcess %d is in CALC instruction\n", proc->pid);
+	// printf("\tProcess %d is in CALC instruction\n", proc->pid);
 	return ((unsigned long)proc & 0UL);
 }
 

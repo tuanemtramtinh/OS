@@ -190,17 +190,9 @@ int pg_getpage(struct mm_struct *mm, int page_num, int *frame_num,
 
     /* TODO: Play with your paging theory here */
 
-    if (MEMPHY_get_freefp(pcb->mram, &free_frame_num) == 0) {
-      __swap_cp_page(pcb->active_mswp, target_frame_num, pcb->mram,
-                     free_frame_num);
-      pte_set_fpn(&mm->pgd[page_num], free_frame_num);
-      return 0;
-    }
-
     /* Find victim page */
-    if (find_victim_page(pcb->mm, &victim_page_num) < 0) {
-      return -1;
-    }
+    find_victim_page(pcb->mm, &victim_page_num);
+  
 
     victim_page_entry = pcb->mm->pgd[victim_page_num];
     victim_frame_num = PAGING_FPN(victim_page_entry);
@@ -229,7 +221,8 @@ int pg_getpage(struct mm_struct *mm, int page_num, int *frame_num,
 #endif
 
     enlist_pgn_node(&pcb->mm->fifo_pgn, page_num);
-    return 0;
+    
+    //return 0;
   }
 
   *frame_num = PAGING_FPN(page_entry);

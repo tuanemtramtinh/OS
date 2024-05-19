@@ -20,10 +20,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <unistd.h>
 #define init_tlbcache(mp, sz, ...) init_memphy(mp, sz, (1, ##__VA_ARGS__))
 
 pthread_mutex_t tlb_lock;
+pthread_mutex_t pid_lock;
 
 /*
  *  tlb_cache_read read TLB cache device
@@ -45,30 +46,30 @@ int tlb_cache_read(struct pcb_t *proc, struct memphy_struct *mp, int pid,
   //*
   uint32_t tlb_index = (uint32_t)pgnum % mp->maxsz;
 
-  pthread_mutex_lock(&tlb_lock);
 
   if (mp->storage[tlb_index] == -1) {
     //* do not have that entry in tlb, fail to read
     //* update the tlb entries outside this function
-    pthread_mutex_unlock(&tlb_lock);
     return -1;
   }
   //* checking pid
+  pthread_mutex_lock(&pid_lock);
   if (pid != mp->pid_hold) {
+    pthread_mutex_unlock(&pid_lock);
     //* pid changed so that the data in tlb is not accurate anymore
     //* therefore, flush all and conclude that it is a miss hit
-    // printf("Different process come in TLB, current process is: %d, new process is: %d\n", pid, mp->pid_hold);
-    // printf("Flush every pages of process %d in stored in TLB\n", pid);
+    pthread_mutex_lock(&tlb_lock); 
     tlb_change_all_page_tables_of(proc,mp);
+    pthread_mutex_lock(&pid_lock);
     mp->pid_hold = pid;
+    pthread_mutex_unlock(&pid_lock);
     pthread_mutex_unlock(&tlb_lock);
-    return -1;
+    return 0;
   }
+  pthread_mutex_unlock(&pid_lock);
   //*value = mp->storage[tlbIndex];
   // return mp->storage[tlbIndex];
   TLBMEMPHY_read(mp, tlb_index, value);
-  pthread_mutex_unlock(&tlb_lock);
-  //* return the value if value == -1 mean it not exist in TLB, else it does exist
   return *value;
 }
 
@@ -88,23 +89,27 @@ int tlb_cache_write(struct pcb_t *proc, struct memphy_struct *mp, int pid,
   if (mp == NULL) {
     return -1;
   }
+  pthread_mutex_lock(&pid_lock);
   if (pid != mp->pid_hold) {
+    pthread_mutex_unlock(&pid_lock);
     //* pid changed so that the data in tlb is not accurate anymore
     //* therefore, flush all and conclude that it is a miss hit
-    // printf("Different process come in TLB, current process is: %d, new process is: %d\n", pid, mp->pid_hold);
-    // printf("Flush every pages of process %d in stored in TLB\n", pid);
-    //printf("pid_hold in tlb_cache_write before assignment : %d\n", mp->pid_hold);
+    pthread_mutex_lock(&tlb_lock);
     tlb_change_all_page_tables_of(proc,mp);
+    pthread_mutex_lock(&pid_lock);
     //* update pid hold
     mp->pid_hold = pid;
-    //printf("pid_hold in tlb_cache_write after assignment : %d\n", mp->pid_hold);
-    // return 0;
+    pthread_mutex_unlock(&pid_lock);
+    pthread_mutex_unlock(&tlb_lock);
+    // usleep(100);
   }
-  uint32_t tlb_index = (uint32_t)pgnum % mp->maxsz;
-  pthread_mutex_lock(&tlb_lock);
+  else{
+    pthread_mutex_unlock(&pid_lock);
+  }
   // mp->storage[address] = value;
+  uint32_t tlb_index = (uint32_t)pgnum % mp->maxsz;
   TLBMEMPHY_write(mp, tlb_index, value);
-  pthread_mutex_unlock(&tlb_lock);
+  ;
   return 0;
 }
 
@@ -178,6 +183,7 @@ int init_tlbmemphy(struct memphy_struct *mp, int max_size) {
   mp->pid_hold = -1;
   mp->rdmflg = 1;
   pthread_mutex_init(&tlb_lock, NULL);
+  pthread_mutex_init(&pid_lock, NULL);
   return 0;
 }
 
