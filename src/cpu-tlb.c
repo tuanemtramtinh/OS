@@ -132,7 +132,7 @@ int tlbread(struct pcb_t *process, uint32_t source_region, uint32_t byte_offset,
   frame_number = tlb_cache_read(process, process->tlb, process->pid,
                                 page_number, &frame_number_retrieved_from_tlb);
 
-usleep(200);
+usleep(100);
 // printf("******************************************\n");
 #ifdef IODUMP
   if (frame_number >= 0  /*frame_number == frame_num_from_desired_page*/)
@@ -185,7 +185,7 @@ int tlbwrite(struct pcb_t *process, BYTE data, uint32_t destination_region,
   frame_number = tlb_cache_read(process, process->tlb, process->pid, page_number, &frame_number_retrieved_from_tlb);
 
 // printf("******************************************\n");
-usleep(200);
+usleep(100);
 #ifdef IODUMP
   if (frame_number >= 0  /*frame_number == frame_num_from_desired_page*/)
     printf("TLB hit at write region=%d offset=%d value=%d\n",
