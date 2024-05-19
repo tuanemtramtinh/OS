@@ -2,6 +2,7 @@
 #include "timer.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 static pthread_t _timer;
 
@@ -20,6 +21,7 @@ static int timer_stop = 0;
 
 static void * timer_routine(void * args) {
 	while (!timer_stop) {
+		//usleep(100);
 		printf("Time slot %3llu\n", current_time());
 		int fsh = 0;
 		int event = 0;

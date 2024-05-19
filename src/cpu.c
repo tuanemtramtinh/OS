@@ -5,10 +5,13 @@
 #include <stdio.h>
 
 int calc(struct pcb_t * proc) {
+	printf("\tProcess %d is in CALC instruction\n", proc->pid);
 	return ((unsigned long)proc & 0UL);
 }
 
 int alloc(struct pcb_t * proc, uint32_t size, uint32_t reg_index) {
+	printf("\tProcess %d is in ALLOC instruction\n", proc->pid);
+	printf("\tALLOC at region=%d, size=%d\n", reg_index, size);
 	addr_t addr = alloc_mem(size, proc);
 	if (addr == 0) {
 		return 1;
@@ -19,6 +22,8 @@ int alloc(struct pcb_t * proc, uint32_t size, uint32_t reg_index) {
 }
 
 int free_data(struct pcb_t * proc, uint32_t reg_index) {
+	printf("\tProcess %d is in READ instruction\n", proc->pid);
+	printf("\tFREE at region=%d\n", reg_index);
 	return free_mem(proc->regs[reg_index], proc);
 }
 
